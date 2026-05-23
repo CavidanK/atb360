@@ -289,6 +289,36 @@
             align-items: center;
             margin-bottom: 1.5rem;
         }
+
+        .loading-msg {
+            text-align: center;
+            color: #666;
+            margin-top: 2rem;
+        }
+
+        .file-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .file-preview-item {
+            font-size: 0.8rem;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px;
+            text-align: center;
+        }
+
+        .file-preview-item img {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 4px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -337,6 +367,7 @@
                         <div class="file-upload-wrapper">
                             <span style="font-size: 0.85rem; color: #666;">Birdən çox şəkil və ya PDF seçə bilərsiniz. Yükləməyə də bilərsiniz.</span>
                             <input type="file" id="fileUpload" accept="image/*,application/pdf" multiple>
+                            <div id="filePreview" class="file-preview-list"></div>
                         </div>
                     </div>
 
@@ -379,7 +410,49 @@
         </div>
     </div>
 
+    <script src="firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
     <script>
+        const ISSUES_COLLECTION = 'issues';
+        const COUNTER_DOC = 'metadata/bug_counter';
+        const MAX_FILE_SIZE_BYTES = 700000; // ~700 KB per file (Firestore 1 MB doc limit)
+
+        let db = null;
+
+        function initFirebase() {
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+                return false;
+            }
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.firestore();
+            return true;
+        }
+
+        function isFirebaseReady() {
+            return db !== null;
+        }
+
+        async function getNextBugId() {
+            const counterRef = db.doc(COUNTER_DOC);
+            return db.runTransaction(async (transaction) => {
+                const counterSnap = await transaction.get(counterRef);
+                const lastId = counterSnap.exists ? (counterSnap.data().lastId || 1000) : 1000;
+                const nextId = lastId + 1;
+                transaction.set(counterRef, { lastId: nextId }, { merge: true });
+                return nextId;
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        }
+
         // --- Authentication Logic ---
         function checkLoginStatus() {
             if(sessionStorage.getItem('isAdminLoggedIn') === 'true') {
@@ -426,27 +499,98 @@
             }
         }
 
-        // --- File Upload Helper (Faylları Base64 formatına çevirir) ---
-        async function getFilesData(files) {
-            const promises = [];
-            for (let i = 0; i < files.length; i++) {
-                promises.push(new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve({ 
-                        name: files[i].name, 
-                        type: files[i].type, 
-                        data: e.target.result 
+        // --- Base64: encode on upload, parse on dashboard ---
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (file.size > MAX_FILE_SIZE_BYTES) {
+                    reject(new Error(`"${file.name}" çox böyükdür (maks. ~700 KB).`));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const commaIndex = dataUrl.indexOf(',');
+                    const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+                    resolve({
+                        name: file.name,
+                        type: file.type || guessMimeType(file.name),
+                        base64: base64
                     });
-                    reader.onerror = (e) => reject(e);
-                    reader.readAsDataURL(files[i]);
-                }));
-            }
-            return Promise.all(promises);
+                };
+                reader.onerror = () => reject(reader.error || new Error('Fayl oxunmadı'));
+                reader.readAsDataURL(file);
+            });
         }
 
-        // --- Form Göndərilməsi ---
+        async function getFilesAsBase64(fileList) {
+            if (!fileList || fileList.length === 0) return [];
+            const results = [];
+            for (let i = 0; i < fileList.length; i++) {
+                results.push(await fileToBase64(fileList[i]));
+            }
+            return results;
+        }
+
+        function guessMimeType(fileName) {
+            const ext = (fileName.split('.').pop() || '').toLowerCase();
+            const map = {
+                jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+                gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf'
+            };
+            return map[ext] || 'application/octet-stream';
+        }
+
+        /** Parse stored base64 back to a data URL for img/src and download links */
+        function parseBase64ToDataUrl(attachment) {
+            if (!attachment) return '';
+            if (attachment.data) return attachment.data;
+            if (attachment.base64) {
+                const mime = attachment.type || guessMimeType(attachment.name || '');
+                return `data:${mime};base64,${attachment.base64}`;
+            }
+            return '';
+        }
+
+        function isImageAttachment(att) {
+            const type = att.type || guessMimeType(att.name || '');
+            return type.startsWith('image/');
+        }
+
+        function renderFilePreview(fileList) {
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = '';
+            if (!fileList || fileList.length === 0) return;
+
+            Array.from(fileList).forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'file-preview-item';
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.onload = () => URL.revokeObjectURL(img.src);
+                    item.appendChild(img);
+                } else {
+                    item.textContent = '📄';
+                }
+                const label = document.createElement('span');
+                label.textContent = file.name.length > 12 ? file.name.slice(0, 10) + '…' : file.name;
+                item.appendChild(label);
+                preview.appendChild(item);
+            });
+        }
+
+        document.getElementById('fileUpload').addEventListener('change', function() {
+            renderFilePreview(this.files);
+        });
+
+        // --- Form Göndərilməsi (Problem Bildir → Firestore) ---
         document.getElementById('bugForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            if (!isFirebaseReady()) {
+                alert('Firebase konfiqurasiyası tamamlanmayıb. firebase-config.js faylını doldurun.');
+                return;
+            }
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.innerText = "Yüklənir... (Gözləyin)";
@@ -454,54 +598,53 @@
 
             try {
                 const fileInput = document.getElementById('fileUpload');
-                const attachmentsData = await getFilesData(fileInput.files);
-
-                let currentId = parseInt(localStorage.getItem('bug_counter') || '1000');
-                currentId++;
-                localStorage.setItem('bug_counter', currentId.toString());
+                const attachmentsBase64 = await getFilesAsBase64(fileInput.files);
+                const bugId = await getNextBugId();
 
                 const newIssue = {
-                    id: currentId,
-                    empName: document.getElementById('empName').value,
-                    department: document.getElementById('department').value,
-                    title: document.getElementById('title').value,
-                    description: document.getElementById('description').value,
-                    status: 'baxılır', 
+                    id: bugId,
+                    empName: document.getElementById('empName').value.trim(),
+                    department: document.getElementById('department').value.trim(),
+                    title: document.getElementById('title').value.trim(),
+                    description: document.getElementById('description').value.trim(),
+                    status: 'baxılır',
                     date: new Date().toLocaleString('az-AZ'),
-                    attachments: attachmentsData
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    attachments: attachmentsBase64
                 };
 
-                let issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
-                issues.unshift(newIssue);
-                localStorage.setItem('mobile_test_issues', JSON.stringify(issues));
+                await db.collection(ISSUES_COLLECTION).add(newIssue);
 
                 const successMsg = document.getElementById('successMessage');
                 successMsg.style.display = 'block';
-                
                 this.reset();
+                document.getElementById('filePreview').innerHTML = '';
                 
                 setTimeout(() => {
                     successMsg.style.display = 'none';
                 }, 3000);
 
             } catch (err) {
-                alert("Fayl yüklənərkən xəta baş verdi: " + err.message);
+                console.error(err);
+                alert("Xəta baş verdi: " + err.message);
             } finally {
                 submitBtn.innerText = "Göndər";
                 submitBtn.disabled = false;
             }
         });
 
-        function updateStatus(bugId, newStatus) {
-            let issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
-            let issueIndex = issues.findIndex(iss => iss.id === bugId);
-            
-            if (issueIndex !== -1) {
-                issues[issueIndex].status = newStatus;
-                localStorage.setItem('mobile_test_issues', JSON.stringify(issues));
-                
-                const selectEl = document.getElementById(`status-${bugId}`);
-                selectEl.className = `status-select status-${newStatus.replace(/\s+/g, '')}`;
+        async function updateStatus(docId, newStatus) {
+            if (!isFirebaseReady()) return;
+
+            try {
+                await db.collection(ISSUES_COLLECTION).doc(docId).update({ status: newStatus });
+                const selectEl = document.getElementById(`status-${docId}`);
+                if (selectEl) {
+                    selectEl.className = `status-select status-${newStatus.replace(/\s+/g, '')}`;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Status yenilənərkən xəta: ' + err.message);
             }
         }
 
@@ -515,55 +658,86 @@
             }
         }
 
-        function loadIssues() {
-            const list = document.getElementById('issueList');
-            const issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
-            
-            if(issues.length === 0) {
-                list.innerHTML = '<p style="color: #666; text-align: center; margin-top: 2rem;">Hələ heç bir xəta bildirilməyib.</p>';
-                return;
-            }
+        function renderAttachments(attachments) {
+            if (!attachments || !attachments.length) return '';
 
-            list.innerHTML = issues.map(issue => {
-                let attachmentsHTML = '';
-                if (issue.attachments && issue.attachments.length > 0) {
-                    attachmentsHTML = '<div class="attachments-container"><strong>Qoşmalar:</strong><br>';
-                    issue.attachments.forEach(att => {
-                        if (att.type.startsWith('image/')) {
-                            attachmentsHTML += `<a href="${att.data}" download="${att.name}" title="Yükləmək üçün klikləyin"><img src="${att.data}" class="attachment-img"></a>`;
-                        } else {
-                            attachmentsHTML += `<a href="${att.data}" download="${att.name}" class="attachment-pdf">📄 ${att.name}</a>`;
-                        }
-                    });
-                    attachmentsHTML += '</div>';
+            let html = '<div class="attachments-container"><strong>Qoşmalar:</strong><br>';
+            attachments.forEach(att => {
+                const dataUrl = parseBase64ToDataUrl(att);
+                if (!dataUrl) return;
+
+                const name = escapeHtml(att.name || 'fayl');
+                if (isImageAttachment(att)) {
+                    html += `<a href="${dataUrl}" download="${name}" title="Yükləmək üçün klikləyin"><img src="${dataUrl}" class="attachment-img" alt="${name}"></a>`;
+                } else {
+                    html += `<a href="${dataUrl}" download="${name}" target="_blank" rel="noopener" class="attachment-pdf">📄 ${name}</a>`;
                 }
+            });
+            html += '</div>';
+            return html;
+        }
 
-                return `
+        function renderIssue(issue) {
+            const attachmentsHTML = renderAttachments(issue.attachments);
+
+            const statusClass = getStatusClass(issue.status);
+            const docId = issue.docId;
+
+            return `
                 <div class="issue-item">
                     <div class="issue-title">
-                        <span class="bug-id">#${issue.id}</span> ${issue.title}
+                        <span class="bug-id">#${issue.id}</span> ${escapeHtml(issue.title)}
                     </div>
-                    <div class="issue-desc"><strong>Əməkdaş:</strong> ${issue.empName} (${issue.department})</div>
-                    <div class="issue-desc">${issue.description}</div>
-                    
-                    ${attachmentsHTML} 
-                    
+                    <div class="issue-desc"><strong>Əməkdaş:</strong> ${escapeHtml(issue.empName)} (${escapeHtml(issue.department)})</div>
+                    <div class="issue-desc">${escapeHtml(issue.description)}</div>
+                    ${attachmentsHTML}
                     <div style="margin-top: 15px;">
-                        <label for="status-${issue.id}" style="display:inline; font-size: 0.85rem; color: #555;">Status:</label>
-                        <select id="status-${issue.id}" class="status-select ${getStatusClass(issue.status)}" onchange="updateStatus(${issue.id}, this.value)">
+                        <label for="status-${docId}" style="display:inline; font-size: 0.85rem; color: #555;">Status:</label>
+                        <select id="status-${docId}" class="status-select ${statusClass}" onchange="updateStatus('${docId}', this.value)">
                             <option value="baxılır" ${issue.status === 'baxılır' ? 'selected' : ''}>Baxılır</option>
                             <option value="qəbul edildi" ${issue.status === 'qəbul edildi' ? 'selected' : ''}>Qəbul edildi</option>
                             <option value="düzəldildi" ${issue.status === 'düzəldildi' ? 'selected' : ''}>Düzəldildi</option>
                             <option value="ləğv edildi" ${issue.status === 'ləğv edildi' ? 'selected' : ''}>Ləğv edildi</option>
                         </select>
                     </div>
-
-                    <div class="issue-meta">Tarix: ${issue.date}</div>
+                    <div class="issue-meta">Tarix: ${escapeHtml(issue.date)}</div>
                 </div>
-                `;
-            }).join('');
+            `;
         }
 
+        async function loadIssues() {
+            const list = document.getElementById('issueList');
+
+            if (!isFirebaseReady()) {
+                list.innerHTML = '<p class="loading-msg">Firebase konfiqurasiyası tapılmadı. firebase-config.js faylını doldurun.</p>';
+                return;
+            }
+
+            list.innerHTML = '<p class="loading-msg">Yüklənir...</p>';
+
+            try {
+                const snapshot = await db.collection(ISSUES_COLLECTION)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                if (snapshot.empty) {
+                    list.innerHTML = '<p style="color: #666; text-align: center; margin-top: 2rem;">Hələ heç bir xəta bildirilməyib.</p>';
+                    return;
+                }
+
+                const issues = snapshot.docs.map(doc => ({
+                    docId: doc.id,
+                    ...doc.data()
+                }));
+
+                list.innerHTML = issues.map(renderIssue).join('');
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<p class="error-msg" style="display:block;">Məlumat yüklənərkən xəta: ' + escapeHtml(err.message) + '</p>';
+            }
+        }
+
+        initFirebase();
         checkLoginStatus();
     </script>
 </body>
