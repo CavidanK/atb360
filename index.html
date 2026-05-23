@@ -141,23 +141,6 @@
             cursor: not-allowed;
         }
 
-        .btn-outline {
-            background-color: transparent;
-            color: var(--danger);
-            border: 2px solid var(--danger);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-outline:hover {
-            background-color: var(--danger);
-            color: white;
-        }
-
         /* Issue List Styles */
         .issue-item {
             border-left: 4px solid var(--primary-color);
@@ -283,13 +266,6 @@
             margin-top: 1rem;
         }
 
-        .flex-between {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
         .loading-msg {
             text-align: center;
             color: #666;
@@ -376,37 +352,10 @@
             </div>
         </div>
 
-        <!-- DASHBOARD TAB (Gizli - Giriş tələb edir) -->
+        <!-- DASHBOARD TAB -->
         <div id="dashboard" class="tab-content">
-            
-            <div id="dashboard-login" class="card">
-                <h2>Admin Girişi</h2>
-                <p style="text-align:center; margin-bottom: 1.5rem; font-size: 0.9rem; color: #666;">
-                    Bildirilən xətalara baxmaq və idarə etmək üçün giriş etməlisiniz.
-                </p>
-                <div class="form-group">
-                    <label for="username">İstifadəçi adı</label>
-                    <input type="text" id="username" placeholder="İstifadəçi adını daxil edin">
-                </div>
-                <div class="form-group">
-                    <label for="password">Şifrə</label>
-                    <input type="password" id="password" placeholder="Şifrəni daxil edin">
-                </div>
-                <button class="btn" onclick="login()">Daxil ol</button>
-                <div id="loginError" class="error-msg" style="display: none;">İstifadəçi adı və ya şifrə yanlışdır!</div>
-            </div>
-
-            <div id="dashboard-content" style="display: none;">
-                <div class="flex-between">
-                    <h2 style="margin: 0;">Bildirilən Xətalar</h2>
-                    <button class="btn-outline" onclick="logout()">Çıxış et</button>
-                </div>
-                
-                <div id="issueList">
-                    <!-- Issues will be dynamically injected here -->
-                </div>
-            </div>
-
+            <h2>Bildirilən Xətalar</h2>
+            <div id="issueList"></div>
         </div>
     </div>
 
@@ -453,40 +402,6 @@
             return div.innerHTML;
         }
 
-        // --- Authentication Logic ---
-        function checkLoginStatus() {
-            if(sessionStorage.getItem('isAdminLoggedIn') === 'true') {
-                document.getElementById('dashboard-login').style.display = 'none';
-                document.getElementById('dashboard-content').style.display = 'block';
-                loadIssues();
-            } else {
-                document.getElementById('dashboard-login').style.display = 'block';
-                document.getElementById('dashboard-content').style.display = 'none';
-            }
-        }
-
-        function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const errorDiv = document.getElementById('loginError');
-
-            // Admin giris melumatlari
-            if (user === 'ceykey' && pass === 'CeyKey86.') {
-                sessionStorage.setItem('isAdminLoggedIn', 'true');
-                errorDiv.style.display = 'none';
-                checkLoginStatus();
-            } else {
-                errorDiv.style.display = 'block';
-            }
-        }
-
-        function logout() {
-            sessionStorage.removeItem('isAdminLoggedIn');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            checkLoginStatus();
-        }
-
         function switchTab(tabId) {
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -494,8 +409,8 @@
             event.target.classList.add('active');
             document.getElementById(tabId).classList.add('active');
             
-            if(tabId === 'dashboard') {
-                checkLoginStatus();
+            if (tabId === 'dashboard') {
+                loadIssues();
             }
         }
 
@@ -738,7 +653,6 @@
         }
 
         initFirebase();
-        checkLoginStatus();
     </script>
 </body>
 </html>
