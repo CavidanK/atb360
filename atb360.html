@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobil Tətbiq - Test Portalı</title>
+    <style>
+        :root {
+            --primary-color: #004B87; 
+            --secondary-color: #0073CF;
+            --background: #f4f6f8;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --success: #1e8e3e;
+            --warning: #f29900;
+            --danger: #d93025;
+            --info: #17a2b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1.2rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+        }
+
+        .container {
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        input[type="text"], 
+        input[type="password"],
+        select, 
+        textarea {
+            width: 100%;
+            padding: 0.85rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #fafafa;
+        }
+
+        input:focus, 
+        select:focus, 
+        textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            background-color: #fff;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 120px;
+        }
+
+        .file-upload-wrapper {
+            background-color: #eef2f5;
+            border: 2px dashed #b0c4de;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+        }
+        
+        .btn:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--danger);
+            border: 2px solid var(--danger);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        /* Issue List Styles */
+        .issue-item {
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            background: var(--card-bg);
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .issue-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0.3rem;
+            color: var(--primary-color);
+        }
+
+        .bug-id {
+            color: #666;
+            font-size: 0.9rem;
+            margin-right: 5px;
+            font-weight: normal;
+        }
+
+        .issue-desc {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+
+        .issue-meta {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.5rem;
+        }
+        
+        /* Attachment Styles */
+        .attachments-container {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+        }
+        .attachment-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-right: 8px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .attachment-pdf {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #eef2f5;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            color: var(--primary-color);
+            margin-right: 8px;
+            margin-top: 5px;
+            font-weight: bold;
+            border: 1px solid #b0c4de;
+        }
+        
+        .status-select {
+            margin-top: 0.5rem;
+            padding: 0.4rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        .status-baxilir { color: var(--warning); border-color: var(--warning); }
+        .status-qebul { color: var(--info); border-color: var(--info); }
+        .status-duzeldildi { color: var(--success); border-color: var(--success); }
+        .status-legv { color: var(--danger); border-color: var(--danger); }
+
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #ddd;
+        }
+        .nav-tab {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+        }
+        .nav-tab.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background-color: #f9fbff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .success-msg, .error-msg {
+            display: none;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .success-msg {
+            background-color: #e6f4ea;
+            color: var(--success);
+        }
+        .error-msg {
+            background-color: #fce8e6;
+            color: var(--danger);
+            display: block;
+            margin-top: 1rem;
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Mobil Tətbiq - Test Portalı</h1>
+    </header>
+
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="switchTab('report')">Problem Bildir</div>
+        <div class="nav-tab" onclick="switchTab('dashboard')">Bildirilən xətalar</div>
+    </div>
+
+    <div class="container">
+        <!-- REPORT TAB (Açıq) -->
+        <div id="report" class="tab-content active">
+            <div id="successMessage" class="success-msg">
+                Xəta uğurla qeydə alındı! Təşəkkür edirik.
+            </div>
+
+            <div class="card">
+                <h2>Yeni Xəta Bildirişi</h2>
+                <form id="bugForm">
+                    <div class="form-group">
+                        <label for="empName">Əməkdaşın adı və soyadı</label>
+                        <input type="text" id="empName" placeholder="Ad və Soyadınızı daxil edin" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="department">Departament</label>
+                        <input type="text" id="department" placeholder="Məsələn: IT, Risklərin İdarəedilməsi və s." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="title">Xətanın qısa adı</label>
+                        <input type="text" id="title" placeholder="Məsələn: Tətbiq açılarkən donur" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Xəta haqqında ətraflı məlumat</label>
+                        <textarea id="description" placeholder="Zəhmət olmasa, nə baş verdiyini ətraflı yazın..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Şəkil və ya PDF yüklə (İstəyə bağlı)</label>
+                        <div class="file-upload-wrapper">
+                            <span style="font-size: 0.85rem; color: #666;">Birdən çox şəkil və ya PDF seçə bilərsiniz. Yükləməyə də bilərsiniz.</span>
+                            <input type="file" id="fileUpload" accept="image/*,application/pdf" multiple>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn">Göndər</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- DASHBOARD TAB (Gizli - Giriş tələb edir) -->
+        <div id="dashboard" class="tab-content">
+            
+            <div id="dashboard-login" class="card">
+                <h2>Admin Girişi</h2>
+                <p style="text-align:center; margin-bottom: 1.5rem; font-size: 0.9rem; color: #666;">
+                    Bildirilən xətalara baxmaq və idarə etmək üçün giriş etməlisiniz.
+                </p>
+                <div class="form-group">
+                    <label for="username">İstifadəçi adı</label>
+                    <input type="text" id="username" placeholder="İstifadəçi adını daxil edin">
+                </div>
+                <div class="form-group">
+                    <label for="password">Şifrə</label>
+                    <input type="password" id="password" placeholder="Şifrəni daxil edin">
+                </div>
+                <button class="btn" onclick="login()">Daxil ol</button>
+                <div id="loginError" class="error-msg" style="display: none;">İstifadəçi adı və ya şifrə yanlışdır!</div>
+            </div>
+
+            <div id="dashboard-content" style="display: none;">
+                <div class="flex-between">
+                    <h2 style="margin: 0;">Bildirilən Xətalar</h2>
+                    <button class="btn-outline" onclick="logout()">Çıxış et</button>
+                </div>
+                
+                <div id="issueList">
+                    <!-- Issues will be dynamically injected here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Authentication Logic ---
+        function checkLoginStatus() {
+            if(sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+                document.getElementById('dashboard-login').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+                loadIssues();
+            } else {
+                document.getElementById('dashboard-login').style.display = 'block';
+                document.getElementById('dashboard-content').style.display = 'none';
+            }
+        }
+
+        function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+
+            // Admin giris melumatlari
+            if (user === 'ceykey' && pass === 'CeyKey86.') {
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                errorDiv.style.display = 'none';
+                checkLoginStatus();
+            } else {
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('isAdminLoggedIn');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            checkLoginStatus();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if(tabId === 'dashboard') {
+                checkLoginStatus();
+            }
+        }
+
+        // --- File Upload Helper (Faylları Base64 formatına çevirir) ---
+        async function getFilesData(files) {
+            const promises = [];
+            for (let i = 0; i < files.length; i++) {
+                promises.push(new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve({ 
+                        name: files[i].name, 
+                        type: files[i].type, 
+                        data: e.target.result 
+                    });
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsDataURL(files[i]);
+                }));
+            }
+            return Promise.all(promises);
+        }
+
+        // --- Form Göndərilməsi ---
+        document.getElementById('bugForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = "Yüklənir... (Gözləyin)";
+            submitBtn.disabled = true;
+
+            try {
+                const fileInput = document.getElementById('fileUpload');
+                const attachmentsData = await getFilesData(fileInput.files);
+
+                let currentId = parseInt(localStorage.getItem('bug_counter') || '1000');
+                currentId++;
+                localStorage.setItem('bug_counter', currentId.toString());
+
+                const newIssue = {
+                    id: currentId,
+                    empName: document.getElementById('empName').value,
+                    department: document.getElementById('department').value,
+                    title: document.getElementById('title').value,
+                    description: document.getElementById('description').value,
+                    status: 'baxılır', 
+                    date: new Date().toLocaleString('az-AZ'),
+                    attachments: attachmentsData
+                };
+
+                let issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
+                issues.unshift(newIssue);
+                localStorage.setItem('mobile_test_issues', JSON.stringify(issues));
+
+                const successMsg = document.getElementById('successMessage');
+                successMsg.style.display = 'block';
+                
+                this.reset();
+                
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 3000);
+
+            } catch (err) {
+                alert("Fayl yüklənərkən xəta baş verdi: " + err.message);
+            } finally {
+                submitBtn.innerText = "Göndər";
+                submitBtn.disabled = false;
+            }
+        });
+
+        function updateStatus(bugId, newStatus) {
+            let issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
+            let issueIndex = issues.findIndex(iss => iss.id === bugId);
+            
+            if (issueIndex !== -1) {
+                issues[issueIndex].status = newStatus;
+                localStorage.setItem('mobile_test_issues', JSON.stringify(issues));
+                
+                const selectEl = document.getElementById(`status-${bugId}`);
+                selectEl.className = `status-select status-${newStatus.replace(/\s+/g, '')}`;
+            }
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'baxılır': return 'status-baxilir';
+                case 'qəbul edildi': return 'status-qebul';
+                case 'düzəldildi': return 'status-duzeldildi';
+                case 'ləğv edildi': return 'status-legv';
+                default: return '';
+            }
+        }
+
+        function loadIssues() {
+            const list = document.getElementById('issueList');
+            const issues = JSON.parse(localStorage.getItem('mobile_test_issues')) || [];
+            
+            if(issues.length === 0) {
+                list.innerHTML = '<p style="color: #666; text-align: center; margin-top: 2rem;">Hələ heç bir xəta bildirilməyib.</p>';
+                return;
+            }
+
+            list.innerHTML = issues.map(issue => {
+                let attachmentsHTML = '';
+                if (issue.attachments && issue.attachments.length > 0) {
+                    attachmentsHTML = '<div class="attachments-container"><strong>Qoşmalar:</strong><br>';
+                    issue.attachments.forEach(att => {
+                        if (att.type.startsWith('image/')) {
+                            attachmentsHTML += `<a href="${att.data}" download="${att.name}" title="Yükləmək üçün klikləyin"><img src="${att.data}" class="attachment-img"></a>`;
+                        } else {
+                            attachmentsHTML += `<a href="${att.data}" download="${att.name}" class="attachment-pdf">📄 ${att.name}</a>`;
+                        }
+                    });
+                    attachmentsHTML += '</div>';
+                }
+
+                return `
+                <div class="issue-item">
+                    <div class="issue-title">
+                        <span class="bug-id">#${issue.id}</span> ${issue.title}
+                    </div>
+                    <div class="issue-desc"><strong>Əməkdaş:</strong> ${issue.empName} (${issue.department})</div>
+                    <div class="issue-desc">${issue.description}</div>
+                    
+                    ${attachmentsHTML} 
+                    
+                    <div style="margin-top: 15px;">
+                        <label for="status-${issue.id}" style="display:inline; font-size: 0.85rem; color: #555;">Status:</label>
+                        <select id="status-${issue.id}" class="status-select ${getStatusClass(issue.status)}" onchange="updateStatus(${issue.id}, this.value)">
+                            <option value="baxılır" ${issue.status === 'baxılır' ? 'selected' : ''}>Baxılır</option>
+                            <option value="qəbul edildi" ${issue.status === 'qəbul edildi' ? 'selected' : ''}>Qəbul edildi</option>
+                            <option value="düzəldildi" ${issue.status === 'düzəldildi' ? 'selected' : ''}>Düzəldildi</option>
+                            <option value="ləğv edildi" ${issue.status === 'ləğv edildi' ? 'selected' : ''}>Ləğv edildi</option>
+                        </select>
+                    </div>
+
+                    <div class="issue-meta">Tarix: ${issue.date}</div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        checkLoginStatus();
+    </script>
+</body>
+</html>
